@@ -12,10 +12,11 @@ from kivy.config import Config  # noqa: E402
 
 Config.set("graphics", "resizable", True)
 
-from kivy_app import QaziPosterApp  # noqa: E402
+from kivy_app import QaziPosterApp, _register_kivy_fonts  # noqa: E402
 
 
 def main():
+    _register_kivy_fonts()
     QaziPosterApp().run()
 
 

@@ -22,6 +22,7 @@ from PIL import Image as PILImage
 
 from kivy.app import App
 from kivy.clock import Clock
+from kivy.core.text import LabelBase
 from kivy.core.window import Window
 from kivy.graphics import Color, Line, Rectangle
 from kivy.metrics import dp
@@ -76,6 +77,33 @@ def open_pil(data_bytes):
 
 def now_stamp():
     return time.strftime("%Y%m%d_%H%M%S")
+
+
+def _register_kivy_fonts():
+    """Make every Kivy widget render Urdu.
+
+    Android ships no Arabic-capable system font for Kivy's text provider, so
+    default Labels / Buttons / TextInputs draw tofu for Urdu. Registering each
+    bundled font with Kivy lets name-based font_name work, and aliasing Roboto
+    (the Kivy default) to our Latin+Urdu default font fixes the keypad, typing,
+    and any other control in one shot.
+    """
+    try:
+        for name, path in core.URDU_FONTS.items():
+            if path and os.path.exists(path):
+                try:
+                    LabelBase.register(name=name, fn_regular=path)
+                except Exception:
+                    pass
+        path = core.URDU_FONTS.get(core.DEFAULT_FONT)
+        if path and os.path.exists(path):
+            for alias in ("Roboto", "Roboto-Regular", "Roboto-Bold"):
+                try:
+                    LabelBase.register(name=alias, fn_regular=path)
+                except Exception:
+                    pass
+    except Exception:
+        pass
 
 
 # ------------------------------------------------------------------ bits
@@ -1627,4 +1655,5 @@ def _set_window_icon(self):
 
 
 if __name__ == "__main__":
+    _register_kivy_fonts()
     QaziPosterApp().run()
