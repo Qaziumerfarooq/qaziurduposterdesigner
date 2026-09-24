@@ -31,7 +31,7 @@ icon.filename = icon.png
 presplash.filename = icon.png
 
 # (str) Orientation (one of: portrait, landscape, sensor, user)
-orientation = sensor
+orientation = portrait
 
 # (bool) Indicate if the application should be fullscreen or not
 fullscreen = 0
