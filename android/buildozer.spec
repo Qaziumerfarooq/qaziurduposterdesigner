@@ -89,7 +89,7 @@ p4a.branch = master
 [buildozer]
 
 # (int) Log level (0 = error, 1 = info, 2 = debug)
-log_level = 1
+log_level = 2
 
 # (path) Directory where the source code lives (relative to this spec)
 source.dir = .
