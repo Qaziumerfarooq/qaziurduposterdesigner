@@ -79,14 +79,46 @@ def now_stamp():
     return time.strftime("%Y%m%d_%H%M%S")
 
 
+def _font_has_glyph(path, cp):
+    """Cheap cached check: does the font cmap contain codepoint cp?"""
+    try:
+        from fontTools.ttLib import TTFont
+        cmap = getattr(_font_has_glyph, "_cmaps", {})
+        if path not in cmap:
+            cmap[path] = TTFont(path, fontNumber=0).getBestCmap()
+            _font_has_glyph._cmaps = cmap
+        return cp in cmap[path]
+    except Exception:
+        return None
+
+
+def _ui_font_path():
+    """Font for Kivy UI controls: needs Latin (English buttons/labels) AND
+    Arabic (Urdu keypad + typing field). Noto Naskh has no Latin, so it can't
+    be used here even though it is the shaping default for posters."""
+    wants = (("Amiri-Regular", 0x41, 0x0627), ("Amiri", 0x41, 0x0627),
+             ("BombayBlackUnicode", 0x41, 0x0627),
+             ("Jameel_Noori_Nastaleeq", 0x41, 0x0627),
+             ("JameelNooriNastaleeq", 0x41, 0x0627),
+             ("NotoNaskhArabic-Regular", 0x41, 0x0627),
+             ("NotoNaskhArabic-Bold", 0x41, 0x0627))
+    for name, lat, arab in wants:
+        p = core.URDU_FONTS.get(name)
+        if p and os.path.exists(p):
+            if _font_has_glyph(p, lat) is False or _font_has_glyph(p, arab) is False:
+                continue
+            return p
+    return core.URDU_FONTS.get(core.DEFAULT_FONT)
+
+
 def _register_kivy_fonts():
     """Make every Kivy widget render Urdu.
 
     Android ships no Arabic-capable system font for Kivy's text provider, so
     default Labels / Buttons / TextInputs draw tofu for Urdu. Registering each
     bundled font with Kivy lets name-based font_name work, and aliasing Roboto
-    (the Kivy default) to our Latin+Urdu default font fixes the keypad, typing,
-    and any other control in one shot.
+    (the Kivy default) to a font with Latin + Arabic coverage fixes the keypad,
+    typing, and any other control in one shot.
     """
     try:
         for name, path in core.URDU_FONTS.items():
@@ -95,7 +127,7 @@ def _register_kivy_fonts():
                     LabelBase.register(name=name, fn_regular=path)
                 except Exception:
                     pass
-        path = core.URDU_FONTS.get(core.DEFAULT_FONT)
+        path = _ui_font_path()
         if path and os.path.exists(path):
             for alias in ("Roboto", "Roboto-Regular", "Roboto-Bold"):
                 try:
