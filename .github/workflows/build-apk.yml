@@ -28,19 +28,12 @@ jobs:
 
       - name: Install system dependencies
         run: |
-          sudo rm -f /etc/apt/sources.list.d/microsoft.list \
-            /etc/apt/sources.list.d/microsoft-prod.list \
-            /etc/apt/sources.list.d/azure-cli.list \
-            /etc/apt/sources.list.d/packages-microsoft-com-prod.list \
-            /etc/apt/sources.list.d/google-chrome.list
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends \
-            zip unzip wget curl \
-            autoconf automake libtool pkg-config cmake ninja-build git ccache \
-            zlib1g-dev libffi-dev libltdl-dev gettext \
-            libreadline-dev libjpeg-dev libpng-dev libfreetype-dev libssl-dev \
-            libgl1 libgles2-mesa libegl1 libdrm2 libxkbcommon0 libglib2.0-0 \
-          || { echo 'APT INSTALL FAILED'; tail -60 /var/log/apt/term.log 2>/dev/null; exit 1; }
+            zip unzip wget curl git \
+            autoconf automake libtool pkg-config cmake ninja-build ccache \
+            zlib1g-dev libffi-dev libssl-dev libreadline-dev libncurses-dev \
+            libltdl-dev gettext libjpeg-dev libpng-dev libfreetype-dev
 
       - name: Install buildozer
         run: |
