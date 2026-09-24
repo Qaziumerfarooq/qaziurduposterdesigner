@@ -19,7 +19,9 @@ source.include_exts = py,png,jpg,jpeg,kv,atlas,ttf,otf,icns
 version = 1.0.0
 
 # (list) Application requirements (pip / recipe names)
-requirements = python3,kivy,hostpython3,pygments,docutils,arabic_reshaper,python-bidi,pillow,reportlab,fonttools,plyer
+# NOTE: reportlab is intentionally NOT here - the p4a recipe still fetches
+# from the dead hg.reportlab.com server. It is bundled pure-python in ./vendor.
+requirements = python3,kivy,hostpython3,pygments,docutils,arabic_reshaper,python-bidi,pillow,fonttools,plyer
 
 # (str) Custom source folders for requirements (comma separated)
 # None

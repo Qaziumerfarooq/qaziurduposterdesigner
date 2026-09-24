@@ -28,8 +28,20 @@ import math
 
 from PIL import Image, ImageDraw, ImageFont
 
+# reportlab is bundled as pure-python inside ./vendor so that the Android
+# build does not depend on the (broken, mercurial-based) p4a recipe.
+_VENDOR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "vendor")
+if _VENDOR not in sys.path:
+    sys.path.insert(0, _VENDOR)
+
 import urdu_text
-from pdf_export import save_as_pdf
+
+try:
+    from pdf_export import save_as_pdf
+    _RP_AVAILABLE = True
+except Exception:
+    save_as_pdf = None
+    _RP_AVAILABLE = False
 
 # Optional HarfBuzz + FreeType fallback renderer for fonts whose cmap does
 # not expose Arabic Presentation-Forms (e.g. Jameel Noori Nastaleeq).
