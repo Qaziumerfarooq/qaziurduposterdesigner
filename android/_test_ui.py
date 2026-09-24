@@ -174,6 +174,15 @@ def _after_build(*_a):
             app._zoom_fit()
         check("panel toggle + zoom fit", test_panel_toggle)
 
+        def test_home_flow():
+            app.show_home()
+            assert app._screen == "home"
+            app._home_new(900, 700)
+            assert app.poster.width == 900
+            app.show_editor()
+            assert app._screen == "editor"
+        check("home screen switch + new canvas", test_home_flow)
+
         def test_keypad():
             from urdu_keypad import UrduKeypad, _backspace
             kb = UrduKeypad(app.text_entry)

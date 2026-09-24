@@ -54,7 +54,7 @@ GOLD = get_color_from_hex("#b8860b")
 RED = get_color_from_hex("#b33b3b")
 GREY = (0.5, 0.5, 0.5, 1)
 WHITE = (1, 1, 1, 1)
-PANEL_BG = get_color_from_hex("#f2f4f3")
+PANEL_BG = get_color_from_hex("#ececec")
 
 
 def pil_to_texture(pil):
@@ -137,6 +137,41 @@ def make_lbl(text, size=13, bold=False, color=(0.12, 0.24, 0.2, 1), halign="left
 def make_slider(minv, maxv, default, step=1):
     s = Slider(min=minv, max=maxv, value=default, step=step)
     return s
+
+
+class HomeTile(Button):
+    """White rounded tile (Imagitor-style home grid)."""
+
+    def __init__(self, text, cb, height=dp(92), **kw):
+        super().__init__(text=text, size_hint_y=None, height=height,
+                         background_normal="", background_color=(1, 1, 1, 1),
+                         color=(0.06, 0.06, 0.06, 1), font_size=dp(15),
+                         halign="center", valign="middle", **kw)
+        self.bind(on_release=lambda *_: cb())
+        self.bind(pos=self._frame, size=self._frame)
+        self._frame()
+
+    def _frame(self, *a):
+        self.canvas.after.clear()
+        with self.canvas.after:
+            Color(0.85, 0.85, 0.85, 1)
+            Line(rounded_rectangle=(self.x + 1, self.y + 1,
+                                    self.width - 2, self.height - 2, 8), width=1)
+
+
+class HomeChip(Button):
+    """Small horizontal chip for canvas-size presets."""
+
+    def __init__(self, text, cb, **kw):
+        super().__init__(text=text, size_hint=(None, None), width=dp(96),
+                         height=dp(40), background_normal="",
+                         background_color=(1, 1, 1, 1),
+                         color=(0.06, 0.06, 0.06, 1), font_size=dp(13), **kw)
+        self.bind(on_release=lambda *_: cb())
+
+
+def home_section(text):
+    return make_lbl(text, size=14, bold=True, color=(0.35, 0.35, 0.35, 1))
 
 
 # ------------------------------------------------------------------ popup
@@ -654,6 +689,15 @@ class QaziPosterApp(App):
 
     def build(self):
         self._label_refs = {}
+        self._screen = "none"
+        self.editor_root = self._build_editor()
+        self.home_root = self._build_home()
+        self.shell = BoxLayout()
+        self.shell.add_widget(self.home_root)
+        self.show_home()
+        return self.shell
+
+    def _build_editor(self):
         root = BoxLayout(orientation="vertical")
         root.add_widget(self._build_header())
         self.main_box = BoxLayout(spacing=dp(2))
@@ -678,6 +722,138 @@ class QaziPosterApp(App):
         self.rerender_poster()
         return root
 
+    def _set_screen(self, name):
+        if self._screen == name:
+            return
+        self.shell.clear_widgets()
+        self.shell.add_widget(self.editor_root if name == "editor" else self.home_root)
+        self._screen = name
+        if name == "editor":
+            Clock.schedule_once(lambda *_: self.rerender_poster(), 0.05)
+
+    def show_editor(self):
+        self._set_screen("editor")
+
+    def show_home(self):
+        self._set_screen("home")
+
+    # ------------------------------------------------------------ home
+    def _build_home(self):
+        root = BoxLayout(orientation="vertical")
+        hd = BoxLayout(orientation="horizontal", size_hint_y=None, height=dp(52),
+                       padding=(dp(12), 0, dp(8), 0))
+        hd.canvas.clear()
+        with hd.canvas:
+            Color(0.02, 0.02, 0.02, 1)
+            hd_rect = Rectangle(size=hd.size)
+        hd.bind(pos=lambda s, *_, r=hd_rect: setattr(r, "pos", s.pos))
+        hd.bind(size=lambda s, *_, r=hd_rect: setattr(r, "size", s.size))
+        title = make_lbl("Qazi Urdu Poster Designer", size=16, bold=True,
+                         color=WHITE)
+        title.size_hint_x = 1
+        hd.add_widget(title)
+        ed = make_btn("Editor", self.show_editor, (0.18, 0.18, 0.18, 1),
+                      bold=False, height=dp(36))
+        ed.size_hint_x = None
+        ed.width = dp(84)
+        hd.add_widget(ed)
+        root.add_widget(hd)
+
+        sv = ScrollView(do_scroll_x=False, scroll_type=["content", "bars"])
+        body = BoxLayout(orientation="vertical", padding=dp(12), spacing=dp(10),
+                         size_hint_y=None)
+        body.bind(minimum_height=body.setter("height"))
+
+        body.add_widget(home_section("New Design"))
+        grid = GridLayout(cols=2, spacing=dp(10), size_hint_y=None)
+        grid.bind(minimum_height=grid.setter("height"))
+        grid.add_widget(HomeTile("New Poster\nA4 blank canvas",
+                                 lambda: self._home_new(1240, 1754)))
+        grid.add_widget(HomeTile("New Card\nwide 1050 x 660",
+                                 lambda: self._home_new(1050, 660,
+                                                        (235, 240, 244))))
+        grid.add_widget(HomeTile("Upload Background\nstart from a photo",
+                                 self.upload_background))
+        grid.add_widget(HomeTile("My Designs\nopen saved .qazip",
+                                 self._home_open_project))
+        body.add_widget(grid)
+
+        body.add_widget(home_section("Canvas Size"))
+        chips = ScrollView(size_hint_y=None, height=dp(46),
+                           do_scroll_x=True, do_scroll_y=False,
+                           bar_width="8dp")
+        crow = hbox(spacing=dp(8))
+        crow.add_widget(HomeChip("A4 Poster", lambda: self._home_new(1240, 1754)))
+        crow.add_widget(HomeChip("A3 Poster", lambda: self._home_new(1748, 2480)))
+        crow.add_widget(HomeChip("Card", lambda: self._home_new(
+            1050, 660, (235, 240, 244))))
+        crow.add_widget(HomeChip("Square", lambda: self._home_new(1600, 1600)))
+        crow.add_widget(HomeChip("Story 9:16", lambda: self._home_new(1080, 1920)))
+        crow.add_widget(HomeChip("Custom ...", self._home_custom_size))
+        chips.add_widget(crow)
+        body.add_widget(chips)
+
+        body.add_widget(home_section("Tools"))
+        tgrid = GridLayout(cols=2, spacing=dp(10), size_hint_y=None)
+        tgrid.bind(minimum_height=tgrid.setter("height"))
+        tgrid.add_widget(HomeTile("Download Fonts\nfree Urdu fonts",
+                                  self.font_downloader))
+        tgrid.add_widget(HomeTile("Install Font\nfrom device storage",
+                                  self.install_font_from_file))
+        tgrid.add_widget(HomeTile("Export\nPNG / JPG / PDF",
+                                  self._home_save))
+        tgrid.add_widget(HomeTile("How to use\nquick guide", self._home_help))
+        body.add_widget(tgrid)
+
+        body.add_widget(make_lbl("v1.0  ·  Made with love in Pakistan", size=12,
+                                 color=(0.55, 0.55, 0.55, 1), halign="center"))
+        sv.add_widget(body)
+        root.add_widget(sv)
+        return root
+
+    def _home_new(self, w, h, fill=(255, 255, 255)):
+        self.poster.new_canvas(w, h, fill=fill)
+        self.sync_editor()
+        self.rerender_poster()
+        self.show_editor()
+
+    def _home_custom_size(self):
+        self.new_canvas_prompt()
+
+    def _home_open_project(self):
+        self.open_project()
+
+    def _home_save(self):
+        self.show_editor()
+        def to_save_tab(*_):
+            try:
+                for item in self.panel.tab_list:
+                    if item.text == "Save":
+                        self.panel.switch_to(item)
+                        break
+            except Exception:
+                pass
+        Clock.schedule_once(to_save_tab, 0.1)
+
+    def _home_help(self):
+        pop = Popup(title="How to use", size_hint=(0.9, 0.7))
+        lbl = Label(
+            text="1.  New poster ya card banayein (tiles above)\n\n"
+                 "2.  Text tab - Urdu likhein (keypad), font, size,\n"
+                 "     colour, rotation set karein\n\n"
+                 "3.  Overlay tab - image / logo add karein, resize,\n"
+                 "     rotate, background erase karein\n\n"
+                 "4.  Layer tab - elements ka order set karein\n\n"
+                 "5.  Save tab - PNG / JPG / PDF / project save\n\n"
+                 "6.  Canvas: drag = move, corner = resize,\n"
+                 "     two fingers = zoom / pan",
+            font_size=dp(14), color=(0.1, 0.1, 0.1, 1),
+            halign="left", valign="top")
+        lbl.bind(size=lambda s, *_: setattr(s, "text_size", (s.width - dp(20),
+                                                             None)))
+        pop.content = lbl
+        pop.open()
+
     # ----------------------------------------------------------- header
     def _build_header(self):
         hd = BoxLayout(orientation="horizontal", size_hint_y=None, height=dp(52),
@@ -685,7 +861,7 @@ class QaziPosterApp(App):
         hd.canvas.clear()
         from kivy.graphics import Color as _C, Rectangle as _R
         with hd.canvas:
-            _C(0.043, 0.24, 0.18, 1)
+            _C(0.02, 0.02, 0.02, 1)
             _hd_rect = _R(size=hd.size)
         hd.bind(pos=lambda s, *_, r=_hd_rect: setattr(r, "pos", s.pos))
         hd.bind(size=lambda s, *_, r=_hd_rect: setattr(r, "size", s.size))
@@ -1233,6 +1409,7 @@ class QaziPosterApp(App):
         p.set_background_pil(pil_img)
         self.sync_editor()
         self.rerender_poster()
+        self.show_editor()
         self.notify("Background set (new project)")
 
     def replace_background(self):
@@ -1241,6 +1418,7 @@ class QaziPosterApp(App):
     def _bg_replaced(self, pil_img, _name):
         self.poster.replace_background_pil(pil_img)
         self.rerender_poster()
+        self.show_editor()
         self.notify("Background replaced - design kept")
 
     def new_canvas_prompt(self):
@@ -1259,6 +1437,7 @@ class QaziPosterApp(App):
                     self.poster.new_canvas(w, h)
                     self.sync_editor()
                     self.rerender_poster()
+                    self.show_editor()
                 except Exception:
                     self.notify("Format: width x height e.g. 1600 x 2200", RED)
             else:
@@ -1539,6 +1718,7 @@ class QaziPosterApp(App):
                 self.poster = core.Poster.from_project_bytes(b)
                 self.sync_editor()
                 self.rerender_poster()
+                self.show_editor()
                 self.notify("Project loaded")
             except Exception as e:
                 core.log_error(f"open_project: {e}")
