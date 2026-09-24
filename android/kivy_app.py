@@ -658,9 +658,9 @@ class QaziPosterApp(App):
         from kivy.graphics import Color as _C, Rectangle as _R
         with hd.canvas:
             _C(0.043, 0.24, 0.18, 1)
-            _R(size=hd.size)
-        hd.bind(pos=lambda s, *_: setattr(s.canvas.children[1], "pos", s.pos))
-        hd.bind(size=lambda s, *_: setattr(s.canvas.children[1], "size", s.size))
+            _hd_rect = _R(size=hd.size)
+        hd.bind(pos=lambda s, *_, r=_hd_rect: setattr(r, "pos", s.pos))
+        hd.bind(size=lambda s, *_, r=_hd_rect: setattr(r, "size", s.size))
         t = make_lbl("Qazi Urdu Poster Designer", size=16, bold=True,
                      color=WHITE)
         hd.add_widget(t)
