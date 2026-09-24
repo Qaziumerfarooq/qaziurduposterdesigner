@@ -1,0 +1,20 @@
+# buildozer / Android build artifacts
+android/.buildozer/
+android/bin/
+android/*.log
+
+# python
+__pycache__/
+*.pyc
+.venv/
+venv/
+env/
+
+# desktop build artifacts
+build/
+dist/
+*.spec.bak
+
+# misc
+.DS_Store
+Thumbs.db
