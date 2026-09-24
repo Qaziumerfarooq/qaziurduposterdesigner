@@ -440,11 +440,12 @@ class ColorPopup(Popup):
 # -------------------------------------------------------------- keypad
 class KeypadPopup(Popup):
     def __init__(self, app, **kw):
-        super().__init__(title="", size_hint=(0.96, 0.9), auto_dismiss=False)
+        super().__init__(title="", size_hint=(0.96, 0.92), auto_dismiss=False)
         self.app = app
         self.content = UrduKeypad(app.text_entry,
                                   on_apply=app.apply_urdu_text,
-                                  on_change=app.update_urdu_preview)
+                                  on_change=app.update_urdu_preview,
+                                  preview_cb=app._keypad_preview)
         self.title = "\u0627\u0631\u062f\u0648 \u06a9\u06cc \u0628\u0648\u0631\u0688"
 
 
@@ -955,6 +956,12 @@ class QaziPosterApp(App):
         self.text_entry = TextInput(text="\u0646\u0626\u06cc \u062a\u062d\u0631\u06cc\u0631",
                                     multiline=False, font_size=dp(17),
                                     size_hint_y=None, height=dp(44))
+        try:
+            import android  # noqa
+            self.text_entry.keyboard_mode = "managed"
+        except Exception:
+            pass
+        self.text_entry.bind(focus=self._text_focus)
         self.text_entry.bind(text=lambda *_: self.update_urdu_preview())
         r.add_widget(self.text_entry)
         kb = make_btn("\u0627\u0631\u062f\u0648", self._open_keypad, GOLD, height=dp(44))
@@ -1190,7 +1197,22 @@ class QaziPosterApp(App):
 
     # ---------------------------------------------------- text actions
     def _open_keypad(self):
-        KeypadPopup(self).open()
+        if getattr(self, "_kpop", None) is not None:
+            if self._kpop._window is not None:
+                return
+            self._kpop = None
+        self._kpop = KeypadPopup(self)
+        self._kpop.open()
+
+    def _text_focus(self, ti, val):
+        if val:
+            Clock.schedule_once(lambda *_: self._maybe_auto_keypad(), 0.15)
+        else:
+            pass
+
+    def _maybe_auto_keypad(self):
+        if self.text_entry.focus and self._screen == "editor":
+            self._open_keypad()
 
     def selected_label(self):
         p = self.poster
@@ -1264,18 +1286,28 @@ class QaziPosterApp(App):
                 self.notify("Select a text label first")
         ColorPopup(current=cur, on_ok=ok).open()
 
+    def _text_preview_pil(self):
+        txt = self.text_entry.text
+        if not txt:
+            return None
+        font_name = self.font_spin.text if hasattr(self, "font_spin") and \
+            self.font_spin.text in core.URDU_FONTS else core.DEFAULT_FONT
+        size = int(self.size_sl.value) if hasattr(self, "size_sl") else 40
+        tmp = core.Poster(400, 80, fill=(255, 255, 255))
+        tmp.add_label(text=txt, x=0.5, y=0.5, size=max(int(size * 0.6), 20),
+                      font_name=font_name)
+        return tmp.render_preview(380, 64)
+
+    def _keypad_preview(self, img_widget):
+        pil = self._text_preview_pil()
+        if pil is not None:
+            img_widget.texture = pil_to_texture(pil)
+
     def update_urdu_preview(self):
         try:
-            txt = self.text_entry.text
-            if not txt:
+            img = self._text_preview_pil()
+            if img is None:
                 return
-            font_name = self.font_spin.text if hasattr(self, "font_spin") and \
-                self.font_spin.text in core.URDU_FONTS else core.DEFAULT_FONT
-            size = int(self.size_sl.value) if hasattr(self, "size_sl") else 40
-            tmp = core.Poster(400, 80, fill=(255, 255, 255))
-            tmp.add_label(text=txt, x=0.5, y=0.5, size=max(int(size * 0.6), 20),
-                          font_name=font_name)
-            img = tmp.render_preview(380, 64)
             self.text_thumb.texture = pil_to_texture(img)
             self.text_thumb.size_hint_y = None
             self.text_thumb.height = dp(64)

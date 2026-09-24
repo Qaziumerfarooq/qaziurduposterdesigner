@@ -178,7 +178,15 @@ def system_font_paths():
 URDU_FONTS = discover_fonts()
 
 DEFAULT_FONT = "NotoNaskhArabic-Regular"
-for cand in ["Jameel_Noori_Nastaleeq", "JameelNooriNastaleeq", "Amiri-Regular", "Amiri"]:
+# Prefer fonts whose cmap exposes Arabic Presentation-Forms when the
+# optional HarfBuzz renderer is unavailable (Android); Nastaleeq-style
+# fonts (Jameel) have no PF block and would otherwise draw empty glyphs.
+_PREFER_FONTS = (["Jameel_Noori_Nastaleeq", "JameelNooriNastaleeq",
+                  "Amiri-Regular", "Amiri", "NotoNaskhArabic-Regular"]
+                 if _HB_AVAILABLE else
+                 ["NotoNaskhArabic-Regular", "Amiri-Regular", "Amiri",
+                  "BombayBlackUnicode", "NotoNaskhArabic-Bold"])
+for cand in _PREFER_FONTS:
     if cand in URDU_FONTS:
         DEFAULT_FONT = cand
         break
